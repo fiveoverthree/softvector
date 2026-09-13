@@ -307,9 +307,11 @@ template <typename T>
     requires std::is_integral_v<T>
 bool load_store_test(unsigned sew, unsigned lmul, unsigned lambda, unsigned vd, unsigned vlen)
 {
+    printf("sew: %d, lmul: %d, lambda: %d, vd: %d, vlen: %d\n", sew, lmul, lambda, vd, vlen);
     auto const vtype = encode_matrix_vtype(sew, lmul, lambda, 0, 0, false);
     auto const decoded_vtype = decode_matrix_vtype(vtype);
     auto const elements_per_register = vlen / decoded_vtype.sew;
+    printf("decoded vtpye lmul: %d\n", decoded_vtype.lmul);
     
     using ResultType = std::make_signed_t<T>;
 

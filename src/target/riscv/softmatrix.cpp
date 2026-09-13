@@ -104,17 +104,30 @@ inline constexpr void mmacc(T *vector_elements, unsigned vd, unsigned vs1, unsig
             // std::printf("C[%lu][%lu] =", row_C, col_C);
             for (size_t i_input = 0; i_input < K_eff; ++i_input)
             {
+                auto const vs_offset = (i_input / (lambda * widening)) * (elements_per_register * widening);
+                auto const vs_A_element = (row_C * lambda * widening) + (i_input % (lambda * widening));
+                auto const vs_B_element = (col_C * lambda * widening) + (i_input % (lambda * widening));
+                // auto const a = A_elements[vs_offset + vs_A_element];
+                // auto const b = B_elements[vs_offset + vs_B_element];
+                // std::printf("+ (v%lu[%lu] * v%lu[%lu]) ", vs1 + vs_offset, vs_A_element, vs2 + vs_offset,
+                // vs_B_element);
+
                 // std::printf("+ ([%u @ v%lu[%lu]] * [%u @ v%lu[%lu]]) ", a,
                 //             vs1 + (vs_offset / ((elements_per_register * widening))), vs_A_element, b,
                 //             vs2 + (vs_offset / ((elements_per_register * widening))), vs_B_element);
 
                 // std::printf("+ (%u * %u) ", a, b);
-                accumulator += sign_zero_extend(A_elements[i_input + row_C * K_eff], signed_A) *
-                               sign_zero_extend(B_elements[i_input + col_C * K_eff], signed_B);
+                accumulator += sign_zero_extend(A_elements[vs_offset + vs_A_element], signed_A) *
+                               sign_zero_extend(B_elements[vs_offset + vs_B_element], signed_B);
             }
 
-            C_elements[row_C*rows_C + col_C] += accumulator;
+            auto const vd_offset = (col_C / lambda) * elements_per_register;
+            auto const vd_element = (row_C * lambda) + (col_C % lambda);
+            // std::printf("= %lu @ v%lu[%lu] \n", accumulator, vd + (vd_offset / elements_per_register), vd_element);
+            //std::printf("%lu | ", accumulator);
+            C_elements[vd_offset + vd_element] += accumulator;
         }
+        // std::printf("\n\n");
     }
 }
 
@@ -127,8 +140,11 @@ inline constexpr void wmmacc(T_I *input_elements, T_O *output_elements, unsigned
     static_assert(sizeof(T_O) >= sizeof(T_I), "Illegal narrowing");
     auto const elements_per_register = vlen / sew;
 
+    // How many elements does a register contribute to a row
+    auto const row_elements_per_register = lambda * widening;
+
     // Multiplication dimension for inputs, i.e. a result element is the sum of K_eff multiplications
-    auto const K_eff = lmul * lambda * widening;
+    auto const K_eff = lmul * row_elements_per_register;
 
     // vs1 marks the start of A
     auto *const A_elements = input_elements + (vs1 * elements_per_register * widening);
@@ -149,15 +165,24 @@ inline constexpr void wmmacc(T_I *input_elements, T_O *output_elements, unsigned
             int64_t accumulator = 0;
             for (size_t i_input = 0; i_input < K_eff; ++i_input)
             {
+                auto const vs_offset = (i_input / row_elements_per_register) * (elements_per_register * widening);
+                auto const vs_A_element = (row_C * row_elements_per_register) + (i_input % row_elements_per_register);
+                auto const vs_B_element = (col_C * row_elements_per_register) + (i_input % row_elements_per_register);
+                // auto const a = A_elements[vs_offset + vs_A_element];
+                // auto const b = B_elements[vs_offset + vs_B_element];
                 // std::printf("+ ([%u @ v%lu[%lu]] * [%u @ v%lu[%lu]]) ", a,
                 //             vs1 + (vs_offset / ((elements_per_register * widening))), vs_A_element, b,
                 //             vs2 + (vs_offset / ((elements_per_register * widening))), vs_B_element);
-                accumulator += sign_zero_extend(A_elements[i_input + row_C * K_eff], signed_A) *
-                               sign_zero_extend(B_elements[i_input + col_C * K_eff], signed_B);
+                accumulator += sign_zero_extend(A_elements[vs_offset + vs_A_element], signed_A) *
+                               sign_zero_extend(B_elements[vs_offset + vs_B_element], signed_B);
             }
 
-            C_elements[row_C * rows_C + col_C] += accumulator;
+            auto const vd_offset = (col_C / lambda) * elements_per_register;
+            auto const vd_element = (row_C * lambda) + (col_C % lambda);
+            C_elements[vd_offset + vd_element] += accumulator;
+            // std::printf("= %lu @ v%lu[%lu] \n", accumulator, vd + (vd_offset / elements_per_register), vd_element);
         }
+        // std::printf("\n");
     }
 }
 
@@ -184,15 +209,15 @@ inline constexpr void mmacc_float(T *const vector_elements, unsigned vd, unsigne
 
             for (size_t i_input = 0; i_input < K_eff; ++i_input)
             {
-                //auto const vs_offset = (i_input / (lambda * widening)) * (elements_per_register * widening);
-                //auto const vs_A_element = (row_C * lambda * widening) + (i_input % (lambda * widening));
-                //auto const vs_B_element = (col_C * lambda * widening) + (i_input % (lambda * widening));
+                auto const vs_offset = (i_input / (lambda * widening)) * (elements_per_register * widening);
+                auto const vs_A_element = (row_C * lambda * widening) + (i_input % (lambda * widening));
+                auto const vs_B_element = (col_C * lambda * widening) + (i_input % (lambda * widening));
 
-                //auto const vs1_index = vs1 * elements_per_register * widening + vs_offset + vs_A_element;
-                //auto const vs2_index = vs2 * elements_per_register * widening + vs_offset + vs_B_element;
+                auto const vs1_index = vs1 * elements_per_register * widening + vs_offset + vs_A_element;
+                auto const vs2_index = vs2 * elements_per_register * widening + vs_offset + vs_B_element;
 
-                T const a = vector_elements[i_input + row_C * K_eff];
-                T const b = vector_elements[i_input + col_C * K_eff];
+                T const a = vector_elements[vs1_index];
+                T const b = vector_elements[vs2_index];
 
                 if constexpr (std::is_same_v<T, float16_t>)
                 {
@@ -212,6 +237,7 @@ inline constexpr void mmacc_float(T *const vector_elements, unsigned vd, unsigne
         }
     }
 }
+
 
 // Single width MMACC
 uint8_t vmmacc_vv(uint8_t *const vector_field, uint32_t const vtype, uint16_t const vd, uint16_t const vs1,
@@ -348,6 +374,15 @@ uint8_t vfmmacc_vv(uint8_t *const vector_field, uint32_t const vtype, uint16_t c
     return 0;
 }
 
+uint32_t tile_reg_idx(uint32_t i, uint32_t LMUL, uint8_t lambda, uint32_t elems_per_reg){
+    uint32_t linesize = lambda * LMUL;
+    uint32_t line = i / linesize;
+    uint32_t elem_in_line = i % linesize;
+    uint32_t regoff = elem_in_line / lambda;
+    uint32_t elementoff = line * lambda + elem_in_line % lambda;
+    return regoff * elems_per_reg + elementoff;
+}
+
 uint8_t vmtl_v(void *const vector_field, uint8_t *const memory, uint16_t const vtype, uint8_t pVm, uint16_t const vd, uint8_t const Llambda,
                             uint32_t const ld, uint32_t vstart, uint32_t const vlen, uint32_t const vl)
 {
@@ -356,6 +391,7 @@ uint8_t vmtl_v(void *const vector_field, uint8_t *const memory, uint16_t const v
     auto const linesize = vtype_decoded.lmul * effective_lambda;
     
     auto const effective_ld = ld == 0 ? linesize : ld;
+    auto const elems_per_reg = vlen / vtype_decoded.sew;
     
     if (effective_lambda == 0) return (1);
     if (vl % linesize != 0) return (1);
@@ -366,16 +402,16 @@ uint8_t vmtl_v(void *const vector_field, uint8_t *const memory, uint16_t const v
     VectorRegField = static_cast<uint8_t *>(vector_field);
 
     std::function<void(std::size_t, uint8_t *, std::size_t)> f_readMem =
-        [memory, vtype_decoded, linesize, effective_ld, vlen](std::size_t addr, uint8_t *buff, std::size_t len)
+        [memory, vtype_decoded, linesize, effective_ld, vlen, effective_lambda, elems_per_reg, VectorRegField](std::size_t addr, uint8_t *buff, std::size_t len)
     {
         const auto base_addr = (vtype_decoded.sew / 8) * ((addr / linesize) * effective_ld + addr % linesize);
+        const auto vreg_base_addr = tile_reg_idx(addr, vtype_decoded.lmul, effective_lambda, elems_per_reg)*vtype_decoded.sew/8;
         for (std::size_t i = 0; i < len; ++i){
-            buff[i] = memory[base_addr + i];
+            VectorRegField[vreg_base_addr+i] = memory[base_addr + i];
         }
     };
 
-    VLSU::load_eew(f_readMem, VectorRegField, vtype_decoded.lmul, 1, vtype_decoded.sew / 8, vl, vlen / 8, vd, 0, vstart, pVm,
-                   1);
+    VLSU::load_eew(f_readMem, VectorRegField, vtype_decoded.lmul, 1, vtype_decoded.sew / 8, vl, vlen / 8, vd, 0, vstart, pVm, 1);
 
     return (0);
 }
@@ -383,11 +419,20 @@ uint8_t vmtl_v(void *const vector_field, uint8_t *const memory, uint16_t const v
 uint8_t vmts_v(void *const vector_field, uint8_t *const memory, uint16_t const vtype, uint8_t pVm, uint16_t const vs, uint8_t const Llambda,
                             uint32_t const ld, uint32_t vstart, uint32_t const vlen, uint32_t const vl)
 {
+    /* This implementations is slightly cursed. 
+    It used the VLSU ONLY for masking calculations. The
+    actual buffer that the vlsu provides is not used.
+    Instead, the lambda function directly accesses the memory from this scope.
+    This is done to avoid indexing nightmares of the buffer ptr of the vlsu.
+    There probably exists a better implementation, for example,
+    by not using the vlsu at all. However, then the masking
+    operations would be duplicated.*/
     auto const vtype_decoded = decode_matrix_vtype(vtype);
     auto const effective_lambda = Llambda == 0 ? vtype_decoded.lambda : 1U << ((Llambda & 0b111) - 1);
     auto const linesize = vtype_decoded.lmul * effective_lambda;
     
     auto const effective_ld = ld == 0 ? linesize : ld;
+    auto const elems_per_reg = vlen / vtype_decoded.sew;
     
     if (effective_lambda == 0) return (1);
     if (vl % linesize != 0) return (1);
@@ -398,11 +443,12 @@ uint8_t vmts_v(void *const vector_field, uint8_t *const memory, uint16_t const v
     VectorRegField = static_cast<uint8_t *>(vector_field);
 
     std::function<void(std::size_t, uint8_t *, std::size_t)> f_writeMem =
-        [memory, vtype_decoded, linesize, effective_ld, vlen](std::size_t addr, uint8_t *buff, std::size_t len)
+        [memory, vtype_decoded, linesize, effective_ld, effective_lambda, elems_per_reg, VectorRegField](std::size_t addr, uint8_t *buff, std::size_t len)
     {
         const auto base_addr = (vtype_decoded.sew / 8) * ((addr / linesize) * effective_ld + addr % linesize);
+        const auto vreg_base_addr = tile_reg_idx(addr, vtype_decoded.lmul, effective_lambda, elems_per_reg) * vtype_decoded.sew / 8;
         for (std::size_t i = 0; i < len; ++i){
-            memory[base_addr + i] = buff[i];
+            memory[base_addr + i] = VectorRegField[vreg_base_addr+i];
         }
     };
 
