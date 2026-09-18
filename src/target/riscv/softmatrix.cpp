@@ -383,7 +383,7 @@ uint32_t tile_reg_idx(uint32_t i, uint32_t LMUL, uint8_t lambda, uint32_t elems_
     return regoff * elems_per_reg + elementoff;
 }
 
-uint8_t vmtl_v(void *const vector_field, uint8_t *const memory, uint16_t const vtype, uint8_t pVm, uint16_t const vd, uint8_t const Llambda,
+uint8_t vmtl_v(void *const vector_field, uint8_t *const memory, uint32_t const vtype, uint8_t pVm, uint16_t const vd, uint8_t const Llambda,
                             uint32_t const ld, uint32_t vstart, uint32_t const vlen, uint32_t const vl)
 {
     auto const vtype_decoded = decode_matrix_vtype(vtype);
@@ -416,7 +416,7 @@ uint8_t vmtl_v(void *const vector_field, uint8_t *const memory, uint16_t const v
     return (0);
 }
 
-uint8_t vmts_v(void *const vector_field, uint8_t *const memory, uint16_t const vtype, uint8_t pVm, uint16_t const vs, uint8_t const Llambda,
+uint8_t vmts_v(void *const vector_field, uint8_t *const memory, uint32_t const vtype, uint8_t pVm, uint16_t const vs, uint8_t const Llambda,
                             uint32_t const ld, uint32_t vstart, uint32_t const vlen, uint32_t const vl)
 {
     /* This implementations is slightly cursed. 
