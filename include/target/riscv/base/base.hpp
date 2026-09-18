@@ -200,11 +200,11 @@ uint16_t concatEEW(uint8_t mew, uint8_t width);
 class VTYPE
 {
   public:
-    uint16_t _bitfield{};
+    uint32_t _bitfield{};
     uint8_t _z_lmul{}, _n_lmul{}, _ta{}, _ma{};
     uint32_t _sew{};
     uint8_t _lambda{};
-    VTYPE(uint16_t _vtype_bitfield) : _bitfield(_vtype_bitfield)
+    VTYPE(uint32_t _vtype_bitfield) : _bitfield(_vtype_bitfield)
     {
         decode(_bitfield, &_ta, &_ma, &_sew, &_z_lmul, &_n_lmul, &_lambda);
     }
