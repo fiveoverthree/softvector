@@ -402,16 +402,20 @@ uint8_t vmtl_v(void *const vector_field, uint8_t *const memory, uint32_t const v
     VectorRegField = static_cast<uint8_t *>(vector_field);
 
     std::function<void(std::size_t, uint8_t *, std::size_t)> f_readMem =
-        [memory, vtype_decoded, linesize, effective_ld, vlen, effective_lambda, elems_per_reg, VectorRegField](std::size_t addr, uint8_t *buff, std::size_t len)
+        [memory, vtype_decoded, linesize, effective_ld](std::size_t addr, uint8_t *buff, std::size_t len)
     {
         const auto base_addr = (vtype_decoded.sew / 8) * ((addr / linesize) * effective_ld + addr % linesize);
-        const auto vreg_base_addr = tile_reg_idx(addr, vtype_decoded.lmul, effective_lambda, elems_per_reg)*vtype_decoded.sew/8;
         for (std::size_t i = 0; i < len; ++i){
-            VectorRegField[vreg_base_addr+i] = memory[base_addr + i];
+            buff[i] = memory[base_addr + i];
         }
     };
 
-    VLSU::load_eew(f_readMem, VectorRegField, vtype_decoded.lmul, 1, vtype_decoded.sew / 8, vl, vlen / 8, vd, 0, vstart, pVm, 1);
+    std::function<size_t(size_t)> f_indexcalc = [vtype_decoded, effective_lambda, elems_per_reg](size_t index)
+    {
+        return tile_reg_idx(index, vtype_decoded.lmul, effective_lambda, elems_per_reg);
+    };
+
+    VLSU::load_eew_indexcalc(f_readMem, f_indexcalc, VectorRegField, vtype_decoded.lmul, 1, vtype_decoded.sew / 8, vl, vlen / 8, vd, 0, vstart, pVm, 1);
 
     return (0);
 }
@@ -443,16 +447,20 @@ uint8_t vmts_v(void *const vector_field, uint8_t *const memory, uint32_t const v
     VectorRegField = static_cast<uint8_t *>(vector_field);
 
     std::function<void(std::size_t, uint8_t *, std::size_t)> f_writeMem =
-        [memory, vtype_decoded, linesize, effective_ld, effective_lambda, elems_per_reg, VectorRegField](std::size_t addr, uint8_t *buff, std::size_t len)
+        [memory, vtype_decoded, linesize, effective_ld](std::size_t addr, uint8_t *buff, std::size_t len)
     {
         const auto base_addr = (vtype_decoded.sew / 8) * ((addr / linesize) * effective_ld + addr % linesize);
-        const auto vreg_base_addr = tile_reg_idx(addr, vtype_decoded.lmul, effective_lambda, elems_per_reg) * vtype_decoded.sew / 8;
         for (std::size_t i = 0; i < len; ++i){
-            memory[base_addr + i] = VectorRegField[vreg_base_addr+i];
+            memory[base_addr + i] = buff[i];
         }
     };
 
-    VLSU::store_eew(f_writeMem, VectorRegField, vtype_decoded.lmul, 1, vtype_decoded.sew / 8, vl, vlen / 8, vs, 0, vstart, pVm, 1);
+    std::function<size_t(size_t)> f_indexcalc = [vtype_decoded, effective_lambda, elems_per_reg](size_t index)
+    {
+        return tile_reg_idx(index, vtype_decoded.lmul, effective_lambda, elems_per_reg);
+    };
+
+    VLSU::store_eew_indexcalc(f_writeMem, f_indexcalc, VectorRegField, vtype_decoded.lmul, 1, vtype_decoded.sew / 8, vl, vlen / 8, vs, 0, vstart, pVm, 1);
 
     return (0);
 }

@@ -32,6 +32,7 @@ namespace VLSU
 {
 
 using MemoryAccessFunction = std::function<void(size_t, uint8_t *, size_t)>;
+using IndexCalcFunction = std::function<size_t(size_t)>;
 
 /* EEW-based */
 //////////////////////////////////////////////////////////////////////////////////////
@@ -49,6 +50,26 @@ VILL::vpu_return_t load_eew(
     uint16_t const vec_elem_start,              //!< Starting element [index]
     uint8_t const mask_f,                       //!< Vector mask flag. 1: masking 0: no masking
     int16_t const stride_bytes                  //!< Stride length [bytes]
+);
+
+//////////////////////////////////////////////////////////////////////////////////////
+/// @brief Load <vl>-times <eew>-elements through readMem function into vector register file, but not
+///        necessarily sequentially. the func_index_calc function is used to calculate which element of the vector 
+///        register should be written to. else identical to load_eew.
+VILL::vpu_return_t load_eew_indexcalc(
+    VLSU::MemoryAccessFunction func_read_mem, 
+    VLSU::IndexCalcFunction func_index_calc,
+    uint8_t *const vector_field,
+    uint64_t const emul_num,
+    uint64_t const emul_denom,
+    uint16_t const eew_bytes,
+    uint32_t const vec_len,
+    uint16_t const vec_reg_len_bytes,
+    uint16_t const vd,
+    uint64_t const src_mem_start,
+    uint16_t const vstart,
+    uint8_t const mask_f,
+    int16_t const stride_bytes
 );
 
 template <bool Masked>
@@ -153,6 +174,26 @@ VILL::vpu_return_t store_eew(
     uint8_t mask_f,             //!< Vector mask flag. 1: masking 0: no masking
     int16_t stride_bytes        //!< Stride length [bytes]
 );
+
+////////////////////////////////////////////////////////////////////////////////////
+/// @brief see load_eew_indexcalc
+VILL::vpu_return_t store_eew_indexcalc(
+    VLSU::MemoryAccessFunction func_write_mem,
+    VLSU::IndexCalcFunction func_index_calc,
+    uint8_t *vec_reg_mem, 
+    uint64_t emul_num,
+    uint64_t emul_denom,
+    uint16_t eew_bytes,
+    uint32_t vec_len,
+    uint16_t vec_reg_len_bytes,
+    uint16_t src_vec_reg,
+    uint64_t dst_mem_start,
+    uint16_t vec_elem_start,
+    uint8_t mask_f,
+    int16_t stride_bytes
+);
+
+
 
 template <bool Masked>
 VILL::vpu_return_t store_eew_v2(
