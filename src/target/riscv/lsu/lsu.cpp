@@ -80,9 +80,10 @@ VILL::vpu_return_t VLSU::load_eew_indexcalc(VLSU::MemoryAccessFunction func_read
     size_t memOffset = src_mem_start;
     for (size_t iElement = 0; iElement < vec_len; ++iElement)
     {
-        if (iElement >= vstart && (mask_f || V.get_mask_reg().get_bit(iElement)))
+        size_t flat_index = func_index_calc(iElement);
+        if (iElement >= vstart && (mask_f || V.get_mask_reg().get_bit(flat_index)))
         {
-            func_read_mem(memOffset, vd_vec[func_index_calc(iElement)].mem_, eew_bytes);
+            func_read_mem(memOffset, vd_vec[flat_index].mem_, eew_bytes);
         }
         memOffset += stride_bytes;
     }
@@ -138,9 +139,10 @@ VILL::vpu_return_t VLSU::store_eew_indexcalc(VLSU::MemoryAccessFunction func_wri
     size_t memOffset = dst_mem_start;
     for (size_t iElement = 0; iElement < vec_len; ++iElement)
     {
-        if (iElement >= vec_elem_start && (mask_f || V.get_mask_reg().get_bit(iElement)))
+        size_t flat_index = func_index_calc(iElement);
+        if (iElement >= vec_elem_start && (mask_f || V.get_mask_reg().get_bit(flat_index)))
         {
-            func_write_mem(memOffset, vs3[func_index_calc(iElement)].mem_, eew_bytes);
+            func_write_mem(memOffset, vs3[flat_index].mem_, eew_bytes);
         }
         memOffset += stride_bytes;
     }
